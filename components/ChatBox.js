@@ -1,8 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// 🔹 Generujemy unikalny user_id (zapisany w localStorage)
+function getUserId() {
+  if (typeof window !== "undefined") {
+    let uid = localStorage.getItem("user_id");
+    if (!uid) {
+      uid = "user-" + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem("user_id", uid);
+    }
+    return uid;
+  }
+  return "unknown-user";
+}
 
 export default function ChatBox() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
+  const [userId, setUserId] = useState("");
+
+  useEffect(() => {
+    setUserId(getUserId());
+  }, []);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -10,25 +28,15 @@ export default function ChatBox() {
     const userMessage = { sender: "user", text: input };
     setMessages([...messages, userMessage]);
 
-    // 🔎 Debug: sprawdź URL backendu
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-    console.log("🔗 Backend URL użyty w fetch:", backendUrl);
-
     try {
-      const res = await fetch(`${backendUrl}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: "frontend-user", text: input }),
-      });
-
-      if (!res.ok) {
-        console.error("❌ Błąd odpowiedzi backendu:", res.status, res.statusText);
-        setMessages((prev) => [
-          ...prev,
-          { sender: "lena", text: `Błąd: ${res.status} ${res.statusText}` },
-        ]);
-        return;
-      }
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId, text: input }),
+        }
+      );
 
       const data = await res.json();
       setMessages((prev) => [
@@ -36,10 +44,9 @@ export default function ChatBox() {
         { sender: "lena", text: data.reply },
       ]);
     } catch (err) {
-      console.error("❌ Błąd fetch:", err);
       setMessages((prev) => [
         ...prev,
-        { sender: "lena", text: "Nie udało się połączyć z backendem." },
+        { sender: "lena", text: "❌ Błąd połączenia z backendem." },
       ]);
     }
 
@@ -48,7 +55,7 @@ export default function ChatBox() {
 
   return (
     <div>
-      <div>
+      <div style={{ marginBottom: 10 }}>
         {messages.map((msg, i) => (
           <p key={i}>
             <b>{msg.sender}:</b> {msg.text}
