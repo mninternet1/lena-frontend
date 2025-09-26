@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 
 export default function ChatBox() {
   const [messages, setMessages] = useState([]);
@@ -11,34 +10,55 @@ export default function ChatBox() {
     const userMessage = { sender: "user", text: input };
     setMessages([...messages, userMessage]);
 
-    const res = await axios.post(
-      process.env.NEXT_PUBLIC_BACKEND_URL + "/chat",
-      { user_id: "mateusz123", text: input }
-    );
+    // 🔎 Debug: sprawdź URL backendu
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+    console.log("🔗 Backend URL użyty w fetch:", backendUrl);
 
-    setMessages((prev) => [
-      ...prev,
-      userMessage,
-      { sender: "lena", text: res.data.reply },
-    ]);
+    try {
+      const res = await fetch(`${backendUrl}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: "frontend-user", text: input }),
+      });
+
+      if (!res.ok) {
+        console.error("❌ Błąd odpowiedzi backendu:", res.status, res.statusText);
+        setMessages((prev) => [
+          ...prev,
+          { sender: "lena", text: `Błąd: ${res.status} ${res.statusText}` },
+        ]);
+        return;
+      }
+
+      const data = await res.json();
+      setMessages((prev) => [
+        ...prev,
+        { sender: "lena", text: data.reply },
+      ]);
+    } catch (err) {
+      console.error("❌ Błąd fetch:", err);
+      setMessages((prev) => [
+        ...prev,
+        { sender: "lena", text: "Nie udało się połączyć z backendem." },
+      ]);
+    }
+
     setInput("");
   };
 
   return (
-    <div style={{ width: "400px", border: "1px solid #ccc", borderRadius: 8, padding: 20 }}>
-      <h2>Lena 💬</h2>
-      <div style={{ height: "300px", overflowY: "auto", marginBottom: 10 }}>
-        {messages.map((m, i) => (
-          <p key={i} style={{ color: m.sender === "user" ? "blue" : "green" }}>
-            <b>{m.sender}:</b> {m.text}
+    <div>
+      <div>
+        {messages.map((msg, i) => (
+          <p key={i}>
+            <b>{msg.sender}:</b> {msg.text}
           </p>
         ))}
       </div>
       <input
-        style={{ width: "80%", marginRight: 5 }}
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+        placeholder="Napisz coś..."
       />
       <button onClick={sendMessage}>Wyślij</button>
     </div>
