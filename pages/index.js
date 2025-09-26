@@ -1,10 +1,20 @@
+import { useState } from "react";
+import Login from "../components/Login";
 import ChatBox from "../components/ChatBox";
 
 export default function Home() {
+  const [loggedIn, setLoggedIn] = useState(
+    typeof window !== "undefined" && localStorage.getItem("token")
+  );
+
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Lena Chatbot</h1>
-      <ChatBox />
+    <div>
+      <h1>Lena Chat</h1>
+      {!loggedIn ? (
+        <Login onLogin={() => setLoggedIn(true)} />
+      ) : (
+        <ChatBox />
+      )}
     </div>
   );
 }
